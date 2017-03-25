@@ -1,0 +1,36 @@
+{
+  "name": "babel6-webpack2-react-tree-shaking",
+  "version": "0.0.0",
+  "dependencies": {
+    "express-useragent": "^1.0.7",
+    "ioredis": "^2.5.0",
+    "ws": "*"
+  },
+  "devDependencies": {
+    "babel-core": "*",
+    "babel-loader": "*",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-es2015": "*",
+    "babel-preset-react": "*",
+    "babili": "*",
+    "babili-webpack-plugin": "*",
+    "css-loader": "^0.26.1",
+    "file-loader": "^0.10.1",
+    "html-webpack-plugin": "*",
+    "http-server": "*",
+    "immutability-helper": "^2.1.2",
+    "react": "*",
+    "react-dom": "*",
+    "redux": "^3.6.0",
+    "style-loader": "^0.13.1",
+    "url-loader": "^0.5.8",
+    "webpack": "*",
+    "webpack-dev-server": "2.x",
+    "winstrap": "^0.5.11"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "start": "http-server ./dist -p %PORT%",
+    "dev": "webpack-dev-server  --devtool eval --hot --inline --content-base build"
+  }
+}
