@@ -27,8 +27,8 @@ export default class TableList extends Component {
             </div>
             <div className="panel-body">
               <div className="row">
-                <div className="col-md-1">
-                  <input type="checkbox" id="checkbox" />
+                <div className="col-md-2">
+                  <div></div>
                 </div>
                 { that.props.columns && that.props.columns.map (({lb, key, len}) => (
                   <div className={`col-md-${len}`}>
@@ -61,9 +61,9 @@ export default class TableList extends Component {
 
 const TableListItem = ({item, columns, selectfn, checked}) => (
     <li className="list-items-row">
-      <div className="row" style={{"padding": "4px"}}>
-          <div className="col-md-1">
-            <input type="checkbox" id="checkbox" defaultChecked={checked} onClick={selectfn.bind(this, item.id, checked)}/>
+      <div className="row vertical-align" style={{"padding": "4px"}}>
+          <div className="col-md-2">
+            <span className="glyphicon glyphicon-bullhorn" aria-hidden="true"></span>
           </div>
           { columns && columns.map (({key, len}) => { 
             let lu = key.split('.'),

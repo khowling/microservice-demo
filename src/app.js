@@ -56,11 +56,11 @@ export default class App extends Component {
         <section className="section">
           <header className="section-header row">
             <h1 className="section-title col-xs-24">
-              Assets
+              My App
             </h1>
           </header>
           <div className="row">
-            <div className="col-xs-12">
+            <div className="col-xs-24 col-md-12">
               <div className="theme-dark color-fill-accent-vivid-high" style={{"padding": "1em"}}>
                 <div className="form-group">
                     <label>My Name</label>
@@ -71,25 +71,28 @@ export default class App extends Component {
                 </div>
               </div>
             </div>
+            <div className="col-xs-24 col-md-12">  
+              <figure className="highlight" style={{"height": "400px"}}>
+                <pre style={{"height": "90%", "overflow-y": "scroll", "margin": 0}} ref={(con) => { this.socketoutdom = con}}>
+                  <code className="language-html" >
+                      {this.props.server_messages.messages}
+                  </code>
+                </pre>
+              </figure>
+            </div>
           </div>
         </section>
 
         <div className="row">
-          <div className="col-xs-24 col-md-12">  
-            <figure className="highlight" style={{"height": "400px"}}>
-              <pre style={{"height": "90%", "overflow-y": "scroll"}} ref={(con) => { this.socketoutdom = con}}>
-                <code className="language-html" >
-                    {this.props.server_messages.messages}
-                </code>
-              </pre>
-            </figure>
 
+          <div className="col-xs-24 col-md-24">  
+            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_FRONTEND" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:6}, {lb:"processing", key:"data.reqopen",len:4}, {lb:"complete",key:"data.reqcomp",len:4}, {lb: "uptime(sec)", key:"data.uptime",len:4}, {key:"data.users",len:2}]}/>
           </div>
-          <div className="col-xs-24 col-md-12">  
-            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_node" columns={[{key:"id",len:4},{key:"data.hostname",len:8}, {key:"data.uptime",len:4}, {key:"data.users",len:2}]}/>
+          <div className="col-xs-24 col-md-24">  
+            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_WORKER" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:6}, {lb:"processing", key:"data.reqopen",len:4}, {lb:"complete",key:"data.reqcomp",len:4}, {lb: "uptime(sec)", key:"data.uptime",len:4}, {key:"data.users",len:2}]}/>
           </div>
-          <div className="col-xs-24 col-md-12">  
-            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_user" columns={[{key:"id",len:2},{lb: "name", key:"data.name",len:8}, {lb: "ping", key:"data.ping",len:2}, {lb: "time", key:"data.connected_for",len:2}, {lb: "platform", key:"data.platform",len:8}]}/>
+          <div className="col-xs-24 col-md-24">  
+            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_USERS"     columns={[{key:"id",len:2},{lb: "name", key:"data.name",len:8}, {lb: "ping", key:"data.ping",len:2}, {lb: "time", key:"data.connected_for",len:2}, {lb: "platform", key:"data.platform",len:8}]}/>
           </div>
         </div>
       </div>
