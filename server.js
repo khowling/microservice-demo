@@ -41,7 +41,8 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
   const PROCESS_NUMBER = r,
         CURRENT_NODE_KEY = `${HASH_CURRENT_PROCESSES_KEY}:${PROCESS_NUMBER}`
   var requestscomplete = 0,
-      requestsstarted = 0
+      requestsstarted = 0,
+      lastreqtime = 0
 
   let updateRedisProcess = () => {
     //console.log (`write node status: ${PROCESS_NUMBER}`);
@@ -54,7 +55,8 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
         "uptime": Math.round((new Date().getTime() - STARTED)/1000),
       //  "users": node_connections.size,
         "reqcomp": requestscomplete,
-        "reqopen": requestsstarted
+        "reqopen": requestsstarted - requestscomplete,
+        "lastreqtm": lastreqtime
       })
       .expire(CURRENT_NODE_KEY, NODE_PING_INTERVAL + 2)
       .exec((err, res) => {  // Executes all previously queued commands in a transaction
@@ -96,13 +98,14 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
     redis_subscibe.on("ready", (c) => console.log ('redis_subscibe ready'));
     redis_subscibe.on("error", (c) => console.log (`redis_subscibe error ${c}`));
     redis_subscibe.on('pmessage', function (pattern, channel, message) {
-      console.log (`redis_subscibe: message "${channel}":  "${message}"`);
+      //console.log (`redis_subscibe: message "${channel}":  "${message}"`);
 
       if (channel == WORK_COMPLETE_SUB) {
 
         let {key, status} = JSON.parse(message),
             response = work_requests_in_queue.get(key)
         requestscomplete++
+        lastreqtime = (Date.now() - work_requests_start_time.get(key))/1000
         response.end (`complete ${status}`)
       } else {
         let rediskey = channel.substr(channel.indexOf ('__:')+3),
@@ -124,6 +127,7 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
 
     let node_connections = new Map(),
         work_requests_in_queue = new Map()
+        work_requests_start_time = new Map()
 
     const WebSocket = require('ws'),
           http = require('http'),
@@ -144,6 +148,7 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
             console.log('doing work')
             requestsstarted++
             work_requests_in_queue.set (requestsstarted, response)
+            work_requests_start_time.set (requestsstarted, Date.now())
             redis.lpush (WORK_TYPE, JSON.stringify({node: CURRENT_NODE_KEY, key: requestsstarted, worktype: WORK_COMPLETE_SUB})).then((succ) => {
               console.log (`LPUSH'd work : ${succ}`)
             })
@@ -232,21 +237,23 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
     console.log (`Staring backend process ${PROCESS_TYPE}`)
     var waiting_pop = false
     const listenforwork = () => {
-      if (requestsstarted - requestscomplete <= 5 && waiting_pop == false) {
+      if (requestsstarted - requestscomplete <= 10 && waiting_pop == false) {
         waiting_pop = true;
         redis_subscibe.brpop(WORK_TYPE, 0).then((res) => {
           waiting_pop = false
-          requestsstarted++
-          listenforwork()
           console.log (`RPOP'd work : ${res[1]}`)
+          requestsstarted++
+          
           let resobj = JSON.parse(res[1])
-          setTimeout (() => {
+          setTimeout ((st) => {
             console.log (`Completed work : ${res[1]}`)
             redis.publish (resobj.worktype, JSON.stringify({key: resobj.key, status: "completed"}))
             requestscomplete++
+            lastreqtime = (Date.now() - st)/1000
             listenforwork()
-          }, 2000)
+          }, (requestsstarted - requestscomplete)*100, Date.now())
 
+          listenforwork()
         })
       }
     }

@@ -46,6 +46,9 @@ export default class App extends Component {
     }
   }
 
+  componentDidMount() {
+    this._toggleListen()
+  }
   componentDidUpdate() {
     this.socketoutdom.scrollTop = this.socketoutdom.scrollHeight
   }
@@ -56,18 +59,18 @@ export default class App extends Component {
         <section className="section">
           <header className="section-header row">
             <h1 className="section-title col-xs-24">
-              My App
+              Application Telemetry
             </h1>
           </header>
           <div className="row">
             <div className="col-xs-24 col-md-12">
               <div className="theme-dark color-fill-accent-vivid-high" style={{"padding": "1em"}}>
                 <div className="form-group">
-                    <label>My Name</label>
+                    <label>Connection name</label>
                     <input type='text' className='form-control'  defaultValue={`${window.navigator.platform}-${window.navigator.product}`}
                 ref={(input) => this.input = input}/>
 
-                  <button className="btn btn-default theme-dark no-outline" onClick={this._toggleListen.bind(this)}>Connect</button>
+                  <button className="btn btn-default theme-dark no-outline" onClick={this._toggleListen.bind(this)}>{!this.props.server_messages.server.name ? "Connect to stream" : `Disconnect from ${this.props.server_messages.server.name}`}</button>
                 </div>
               </div>
             </div>
@@ -86,14 +89,16 @@ export default class App extends Component {
         <div className="row">
 
           <div className="col-xs-24 col-md-24">  
-            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_FRONTEND" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:6}, {lb:"processing", key:"data.reqopen",len:4}, {lb:"complete",key:"data.reqcomp",len:4}, {lb: "uptime(sec)", key:"data.uptime",len:4}, {key:"data.users",len:2}]}/>
+            <TableList title="Process Role: FRONTEND" messages={this.props.server_messages.orderedSets} set_key="kapp_FRONTEND" icon="transfer" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:5}, {lb:"processing", key:"data.reqopen",len:2}, {lb:"complete",key:"data.reqcomp",len:2}, {lb: "uptime(sec)", key:"data.uptime",len:2}, {lb: "last req(S)",key:"data.lastreqtm",len:3}]}/>
           </div>
           <div className="col-xs-24 col-md-24">  
-            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_WORKER" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:6}, {lb:"processing", key:"data.reqopen",len:4}, {lb:"complete",key:"data.reqcomp",len:4}, {lb: "uptime(sec)", key:"data.uptime",len:4}, {key:"data.users",len:2}]}/>
+            <TableList title="Process Role: WORKER" messages={this.props.server_messages.orderedSets} set_key="kapp_WORKER" icon="cog" columns={[{key:"id",len:2},{lb:"hostname",key:"data.hostname",len:5}, {lb:"processing", key:"data.reqopen",len:2}, {lb:"complete",key:"data.reqcomp",len:2}, {lb: "uptime(sec)", key:"data.uptime",len:2}, {lb: "last req(S)",key:"data.lastreqtm",len:3}]}/>
           </div>
+          { true && 
           <div className="col-xs-24 col-md-24">  
-            <TableList title="Server Messages" messages={this.props.server_messages.orderedSets} set_key="kapp_USERS"     columns={[{key:"id",len:2},{lb: "name", key:"data.name",len:8}, {lb: "ping", key:"data.ping",len:2}, {lb: "time", key:"data.connected_for",len:2}, {lb: "platform", key:"data.platform",len:8}]}/>
+            <TableList title="Connected Telemtry Users" messages={this.props.server_messages.orderedSets} set_key="kapp_USERS" icon="user" columns={[{key:"id",len:2},{lb: "name", key:"data.name",len:4}, {lb: "server", key:"data.server",len:4}, {lb: "ping", key:"data.ping",len:2}, {lb: "time", key:"data.connected_for",len:2}, {lb: "platform", key:"data.platform",len:8}]}/>
           </div>
+          }
         </div>
       </div>
     );
