@@ -3,7 +3,7 @@ const
       NODE_HOSTNAME = os.hostname(),
       Redis = require('ioredis'),
       REDIS_DB = "4",
-      redis_url = `redis://localhost:6379/${REDIS_DB}`,
+      redis_url = process.env.REDIS_URL || `redis://localhost:6379/${REDIS_DB}`,
       redis = new Redis(redis_url, {
         enableOfflineQueue: true,
         reconnectOnError: function (err) {
