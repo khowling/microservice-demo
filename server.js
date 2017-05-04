@@ -133,7 +133,7 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
           http = require('http'),
           serveStatic = require('serve-static'),
           useragent = require('express-useragent'),
-          serve = serveStatic('public', {'index': ['index.html']}),
+          serve = serveStatic('dist', {'index': ['index.html']}),
           port = process.env.PORT || 9090,
           httpServer = http.createServer( (request, response) => 
     {

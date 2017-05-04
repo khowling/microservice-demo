@@ -60,7 +60,7 @@ const TableListItem = ({item, columns, icon}) => (
     <li className="list-items-row">
         <div className="row vertical-align" style={{"padding": "4px"}}>
             <div className="col-xs-2">
-                <span className={`glyphicon glyphicon-${icon}`} aria-hidden="true" style={{"margin": "0", "background-color": "#0078D7"}}></span>
+                <span className={`glyphicon glyphicon-${icon}`} aria-hidden="true" style={{"background-color": "#0078D7"}}></span>
             </div>
             { columns.filter((o) => o.key == "data.reqopen").length == 1 &&
             <div className="col-xs-6">

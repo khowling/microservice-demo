@@ -37,7 +37,7 @@ export default class App extends Component {
 
   _toggleListen() {
     if (!this.ws) {
-      this.ws = new WebSocket('ws://localhost:9090/path');
+      this.ws = new WebSocket(`ws://${window.location.hostname}${DEV_PORT}/path`);
       this.ws.addEventListener('open', this._wsOpenEven.bind(this));
       this.ws.addEventListener('message', this._wsMessageEvent.bind(this));
       this.ws.addEventListener('close', this._wsCloseEvent.bind(this));
