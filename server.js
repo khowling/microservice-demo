@@ -69,6 +69,18 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
 
 
   if (PROCESS_TYPE == "FRONTEND") {
+
+
+    let node_connections = new Map(),
+        work_requests_in_queue = new Map()
+        work_requests_start_time = new Map()
+    
+    let sendclients = (type, msg) => {
+      for (let [key, value] of node_connections) {
+        value.ws.send(JSON.stringify(Object.assign({type: type}, msg)))
+      }
+    }
+
     ////////////////////////////////////////////////////////////// Subscribe to updates & send to usesers *FRONTEND ONLY*
 
     // Redis Notifications (https://redis.io/topics/notifications) its not reliable
@@ -77,8 +89,10 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
     // E = Eventspace notifcations, listen for all keys for a specified event (del etc)
     // h = calture 'hash' key events
     // x = capture expiry
-    redis.config("SET", "notify-keyspace-events", "Khx");
-
+    if (!process.env.REDIS_URL) {
+      // cannot issue CONFIG against Azure Redis, need to set keyspace in 'advanced settings' in portal
+      redis.config("SET", "notify-keyspace-events", "Khx");
+    }
     const SUBSCRIBE_CHANNEL_PATTERN = `__keyspace@${REDIS_DB}__:${NOTIFICATION_KEYPREFIX}*:*`;
     redis_subscibe.psubscribe(SUBSCRIBE_CHANNEL_PATTERN, WORK_COMPLETE_SUB,  (err, count) => {
       if (err) {
@@ -117,11 +131,6 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
 
 
     ////////////////////////////////////////////////////////////// WebServer/WebSocket *FRONTEND ONLY*
-
-    let node_connections = new Map(),
-        work_requests_in_queue = new Map()
-        work_requests_start_time = new Map()
-
     const WebSocket = require('ws'),
           http = require('http'),
           serveStatic = require('serve-static'),
@@ -160,12 +169,6 @@ redis.incr(`${HASH_CURRENT_PROCESSES_KEY}:cntr`).then((r) => {
       perMessageDeflate: false,
       server : httpServer
     });
-
-    let sendclients = (type, msg) => {
-      for (let [key, value] of node_connections) {
-        value.ws.send(JSON.stringify(Object.assign({type: type}, msg)))
-      }
-    }
 
     wss.on('connection', function connection(ws) {
 

@@ -4,7 +4,8 @@
   "dependencies": {
     "express-useragent": "^1.0.7",
     "ioredis": "^2.5.0",
-    "ws": "*"
+    "ws": "*",
+    "serve-static": "*"
   },
   "devDependencies": {
     "babel-core": "*",
@@ -32,5 +33,6 @@
     "build": "webpack --config webpack.config.js",
     "start": "http-server ./dist -p %PORT%",
     "dev": "webpack-dev-server  --devtool eval --hot --inline --content-base build"
-  }
+  },
+  "engines" : { "node" : ">=6.10.2" }
 }
