@@ -4,7 +4,7 @@ const
       Redis = require('ioredis'),
       REDIS_DB = "4",
       redis_url = process.env.REDIS_URL || `redis://localhost:6379/${REDIS_DB}`,
-      redis = new Redis(redis_url, {
+      redis_init_obj = {
         enableOfflineQueue: true,
         reconnectOnError: function (err) {
           console.log(`redis reconnectOnError ${err}`);
@@ -13,17 +13,10 @@ const
           var delay = Math.min(times * 2, 2000);
           return delay;
         }
-      }),
-      redis_subscibe = new Redis(redis_url, {
-        enableOfflineQueue: true,
-        reconnectOnError: function (err) {
-          console.log(`redis reconnectOnError ${err}`);
-        },
-        retryStrategy: function (times) {
-          var delay = Math.min(times * 2, 2000);
-          return delay;
-        }
-      })
+      },
+      redis_init_obj_ext = process.env.REDIS_URL ? Object.assign( {}, redis_init_obj, {tls: {}}) : redis_init_obj,
+      redis = new Redis(redis_url, redis_init_obj_ext),
+      redis_subscibe = new Redis(redis_url, redis_init_obj_ext)
 
 redis.on("connect", (c) => console.log ('redis connected'));
 redis.on("ready", (c) => console.log ('redis ready'));
