@@ -11,25 +11,24 @@ import {store} from './lib/store'
 
 export default class App extends Component {
 
-  _wsOpenEven(event) {
-    console.log ('open')
-    let sendjoin = () => {
-      this.ws.send(JSON.stringify({type: "JOIN", time: new Date().getTime(), name: this.input.value}));
-    }
-    this.wsping = setInterval (sendjoin, 10 * 1000)
-    sendjoin()
+  _wsSendJoin(keepalive) {
+    this.ws.send(JSON.stringify({type: "JOIN", time: new Date().getTime(), name: this.input.value}));
   }
 
   _wsMessageEvent(event) {
-    console.log(`dispatching message from server ${event.data}`);
-    store.dispatch(JSON.parse(event.data))
+    //console.log(`dispatching message from server ${event.data}`);
+    var msg = JSON.parse(event.data)
+    if (msg.type == 'JOINED' && msg.interval && !this.wsping) {
+      this.wsping = setInterval (this._wsSendJoin.bind(this, true), msg.interval * 1000)
+    }
+    store.dispatch(msg)
   }
 
   _wsCloseEvent(event) {
     console.log ('close')
-    clearInterval(this.wsping)
+    clearInterval(this.wsping); this.wsping = null
     store.dispatch({type: 'LEFT'})
-    this.ws.removeEventListener('open', this._wsOpenEven.bind(this));
+    this.ws.removeEventListener('open', this._wsSendJoin.bind(this));
     this.ws.removeEventListener('message', this._wsMessageEvent.bind(this));
     this.ws.removeEventListener('close', this._wsCloseEvent.bind(this));
     this.ws = null;
@@ -38,7 +37,7 @@ export default class App extends Component {
   _toggleListen() {
     if (!this.ws) {
       this.ws = new WebSocket(`ws://${window.location.hostname}${DEV_PORT}/path`);
-      this.ws.addEventListener('open', this._wsOpenEven.bind(this));
+      this.ws.addEventListener('open', this._wsSendJoin.bind(this, false));
       this.ws.addEventListener('message', this._wsMessageEvent.bind(this));
       this.ws.addEventListener('close', this._wsCloseEvent.bind(this));
     } else {
@@ -117,7 +116,7 @@ const Tickets = ({user}) => (
 
 const render = () => {
   //console.log (`---rerender new props ${store.getState().server_messages.messages.length}`)
-  console.log (`render path ${window.location.hash}`)
+  //console.log (`render path ${window.location.hash}`)
   if (window.location.hash == '#admin') {
     ReactDOM.render(<App {...store.getState()}/>, document.getElementById('root'));
   } else {

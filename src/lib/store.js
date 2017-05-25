@@ -24,7 +24,7 @@ function server_messages(state =  { orderedSets: {}, server: {}, messages: '> ' 
       break
     case 'JOINED':
       //   http://redux.js.org/docs/recipes/UsingObjectSpreadOperator.html
-      ret =  {server: {name: action.name, server: action.server}}
+      ret =  {server: {name: action.name, server: action.server, interval: action.interval}}
       break
     case 'UPDATEKEY':
       if (!state.orderedSets[action.key]) { 

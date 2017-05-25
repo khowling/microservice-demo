@@ -14,10 +14,13 @@ var metrics = {
 }
 
 const [ redis ] = redis_telemetry.init_redis(process.env.REDIS_URL)
+const [ redis_b, redis_db ] = redis_telemetry.init_redis(process.env.REDIS_URL)
 
-redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then ((proc_key, proc_id) => {
+redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then (([proc_key, proc_id]) => {
+    console.log (`Telemetry started for ${proc_key} (id=${proc_id})`)
 
-    
+    // -----------------------------------------------------------------------------------
+    // ------------------------------------------- PUSH NOTIFICATIONS TO CONNECTED CLIENTS
 
     let node_connections = new Map(), // Map of all WebSocket connected clients
         sendclients = (type, msg) => { // Send keyspace updates to WebSocket clients
@@ -29,37 +32,31 @@ redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then ((proc_key, proc_
     let  work_requests_in_queue = new Map(), // Map of all REST 'WORK' requests (value=response)
         work_requests_start_time = new Map()
 
-    ////////////////////////////////////////////////////////////// Subscribe to updates & send to usesers *FRONTEND ONLY*
 
-    // Redis Notifications (https://redis.io/topics/notifications) its not reliable
-    // require CONFIG SET notify-keyspace-events Khx
+    // Redis Notifications (https://redis.io/topics/notifications)
     // K = Keyspace notifications allows node_connections to listen for all events for a key
-    // E = Eventspace notifcations, listen for all keys for a specified event (del etc)
-    // h = calture 'hash' key events
-    // x = capture expiry
+    // h = capture 'hash' key events, g = Generic commands (like DEL),  x = capture expiry
     if (!process.env.REDIS_URL) {
         // cannot issue CONFIG against Azure Redis, need to set keyspace in 'advanced settings' in portal
-        redis.config("SET", "notify-keyspace-events", "Khx");
+        redis.config("SET", "notify-keyspace-events", "Khxg");
     }
     
-    const [ redis_b, redis_db ] = redis_telemetry.init_redis(process.env.REDIS_URL)
-    const SUBSCRIBE_CHANNEL_PATTERN = `__keyspace@${redis_db}__:${NOTIFICATION_KEYPREFIX}*:*`,
-          WORK_COMPLETE_SUB = `${proc_key}:${WORK_TYPE}`
+    
+    const notify_keyspace = `__keyspace@${redis_db}__:${NOTIFICATION_KEYPREFIX}*:*`,
+          notify_channel = `${proc_key}:${WORK_TYPE}`
 
-    redis_b.psubscribe(SUBSCRIBE_CHANNEL_PATTERN, WORK_COMPLETE_SUB,  (err, count) => {
+    redis_b.psubscribe(notify_keyspace, notify_channel,  (err, count) => {
         if (err) {
         console.log (`redis_b error ${JSON.stringify(err)}`);
         exit (1);
         } else
-        console.log (`redis_b (${count}) now subscribed to ${SUBSCRIBE_CHANNEL_PATTERN} & ${WORK_COMPLETE_SUB}`);
+        console.log (`redis_b (${count}) now subscribed to ${notify_keyspace} & ${notify_channel}`);
     })
-    redis_b.on("connect", (c) => console.log ('redis_b connected'));
-    redis_b.on("ready", (c) => console.log ('redis_b ready'));
-    redis_b.on("error", (c) => console.log (`redis_b error ${c}`));
+
     redis_b.on('pmessage', function (pattern, channel, message) {
         //console.log (`redis_b: message "${channel}":  "${message}"`);
 
-        if (channel == WORK_COMPLETE_SUB) {
+        if (channel == notify_channel) {
 
         let {key, status} = JSON.parse(message),
             response = work_requests_in_queue.get(key)
@@ -82,41 +79,44 @@ redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then ((proc_key, proc_
     });
 
 
-    ////////////////////////////////////////////////////////////// WebServer/WebSocket *FRONTEND ONLY*
+    // -----------------------------------------------------------------------------------
+    // ----------------------------------------------------------------- HTTP & WS Servers
     const WebSocket = require('ws'),
             http = require('http'),
             serveStatic = require('serve-static'),
             useragent = require('express-useragent'),
-            serve = serveStatic('dist', {'index': ['index.html']}),
+            servestatic = serveStatic('dist', {'index': ['index.html']}),
             port = process.env.PORT || 9090,
             httpServer = http.createServer( (request, response) => 
     {
         console.log (`request (static) : ${request.url}`)
-        serve(request, response, () => {
+
+        // server Static website
+        servestatic(request, response, () => {
         console.log (`request (incoming) : ${request && request.url}`)
         if (request) {
             var fullpath = request.url.substr(1),
                 toppath = fullpath.split('/')[0];
 
+            // REST server
             if (toppath == WORK_TYPE) {
-            console.log('doing work')
-            metrics.requestsstarted++
-            work_requests_in_queue.set (metrics.requestsstarted, response)
-            work_requests_start_time.set (metrics.requestsstarted, Date.now())
-            redis.lpush (WORK_TYPE, JSON.stringify({node: CURRENT_NODE_KEY, key: metrics.requestsstarted, worktype: WORK_COMPLETE_SUB})).then((succ) => {
-                console.log (`LPUSH'd work : ${succ}`)
-            })
-
+                console.log('doing work')
+                metrics.requestsstarted++
+                work_requests_in_queue.set (metrics.requestsstarted, response)
+                work_requests_start_time.set (metrics.requestsstarted, Date.now())
+                redis.lpush (WORK_TYPE, JSON.stringify({node: proc_key, key: metrics.requestsstarted, notify_channel: notify_channel})).then((succ) => {
+                    console.log (`LPUSH'd work : ${succ}`)
+                })
             } else {
-            response.writeHead(404) ;
-            response.end();
+                response.writeHead(404) ;
+                response.end();
             }
         }
         })
     }).listen(port);
     console.log (`listening to port ${port}`)
 
-
+    // Web Socket Server
     const wss = new WebSocket.Server({
         perMessageDeflate: false,
         server : httpServer
@@ -132,17 +132,22 @@ redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then ((proc_key, proc_
         ws.on('message', (message) => {
             console.log(`received: ${JSON.stringify(message)}`);
             let mobj = JSON.parse(message)
+
+            // user JOIN & keep-alive
             if (mobj.type == "JOIN") {
 
                 let joined = new Date().getTime()
-                if (node_connections.has(client_key)) {
+                if (node_connections.has(client_key)) { // already joined, its a keep alive
                     joined = node_connections.get(client_key).joined
-                } else {
+                } else { // a new user!
                     node_connections.set (client_key, {ws: ws, joined: joined})
                 }
                 
+                const KEEPALIVE_INTERVAL = 10
+
                 var conn_info = { 
                     type: "JOINED",
+                    interval: KEEPALIVE_INTERVAL,
                     name: mobj.name,
                     process_type: PROC_TYPE,
                     ping: new Date().getTime() - mobj.time,
@@ -151,9 +156,11 @@ redis_telemetry.init_telemetry(redis, PROC_TYPE, metrics).then ((proc_key, proc_
                     platform: `${ua.platform}/${ua.os}/${ua.browser}`, 
                     isMobile: ua.isMobile, 
                 }
+
+                // update redis hash
                 redis.multi()
                 .hmset (client_key, conn_info)
-                .expire(client_key, 180 * 60)
+                .expire(client_key, KEEPALIVE_INTERVAL + 2)
                 .exec((err, res) => {  // Executes all previously queued commands in a transaction
                     if (err) {
                     console.log (`error ${err}`)
