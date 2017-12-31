@@ -51,7 +51,7 @@ module.exports = {
     }),
     new HtmlWebpackPlugin({ 
       template: path.join(__dirname, 'src', 'index.ejs'),
-      DEV_PORT: process.env.DEV_PORT
+      DEV_PORT: process.env.PORT || 5000
     })
   ],
   resolve: {

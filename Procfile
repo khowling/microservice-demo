@@ -1,2 +1,2 @@
-web: node server.js
-worker: node server.js WORKER
+web: node proc_frontend.js
+worker: node proc_worker.js

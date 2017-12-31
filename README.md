@@ -1,5 +1,7 @@
 
-## environment
+## microservices example
+
+Example microservices nodejs app with redis for state management and pub/sub communication
 
 export REDIS_URL=redis://:<key>@k<name>.redis.cache.windows.net:6380/4
 
@@ -13,19 +15,20 @@ build the frontend assets (in the ```/dist``` folder)
 
 ```npm run build```
 
-start the backend processes (using foreman for deployment to deis)
+start the frontend & backend processes (using foreman for deployment to deis)
 
-```nf start```
+```nf start web```
+```nf start worker```
 
 ## development
 
 start the frontend web server process
 
-```node ./server.js```
+```node ./proc_frontend.js```
 
 start the backend process
 
-```node ./server.js WORKER```
+```node ./proc_worker.js```
 
 set the port the browser will establish the websocket connection to (default 9090 if process.env.PORT not set)
 
@@ -34,6 +37,10 @@ set the port the browser will establish the websocket connection to (default 909
 run the webpack built-in dev server
 
 ```npm run dev```
+
+navigate to the telemetry page
+
+```http://localhost:9090/#admin```
 
 
 ### objective ideas
